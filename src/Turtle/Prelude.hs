@@ -182,6 +182,7 @@ module Turtle.Prelude (
     , endless
     , limit
     , limitWhile
+    , drop
     , cache
 
     -- * Folds
@@ -292,7 +293,7 @@ import System.Posix (
     isDirectory,
     isSymbolicLink )
 #endif
-import Prelude hiding (FilePath)
+import Prelude hiding (FilePath, drop)
 
 import Turtle.Pattern (Pattern, anyChar, chars, match, selfless, sepBy)
 import Turtle.Shell
@@ -1424,6 +1425,16 @@ limitWhile predicate s = Shell (\(FoldM step begin done) -> do
             let b' = b && predicate a
             writeIORef ref b'
             if b' then step x a else return x
+    foldIO s (FoldM step' begin done) )
+
+-- | Drop a fixed number of values from a `Shell`
+drop :: Int -> Shell a -> Shell a
+drop n s = Shell (\(FoldM step begin done) -> do
+    ref <- newIORef 0
+    let step' x a = do
+            n' <- readIORef ref
+            writeIORef ref (n' + 1)
+            if n' < n then return x else step x a
     foldIO s (FoldM step' begin done) )
 
 {-| Cache a `Shell`'s output so that repeated runs of the script will reuse the
